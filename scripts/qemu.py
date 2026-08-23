@@ -9,6 +9,12 @@ def main(args: argparse.Namespace):
     is_suspended: bool = args.suspended
     variant = "release" if is_release else "debug"
 
+    subprocess.run(
+        ["cargo", "build"] + (["--release"] if is_release else []),
+        check=True,
+        cwd=pathlib.Path(__file__).parent.parent,
+    )
+
     a = ["qemu-system-riscv64"]
     a += ["-machine", "virt"]
     a += ["-cpu", "rv64"]
