@@ -20,4 +20,5 @@ test = false
 panic = "abort"
 
 [profile.release]
+debug = "full"
 panic = "abort"
