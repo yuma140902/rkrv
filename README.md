@@ -23,14 +23,7 @@ cargo b
 ## QEMU で起動
 
 ```sh
-qemu-system-riscv64 \
-  -machine virt \
-  -cpu rv64 \
-  -m 128M \
-  -smp 1 \
-  -nographic \
-  -bios default \
-  -kernel target/riscv64gc-unknown-none-elf/debug/rkrv \
+./scripts/qemu
 ```
 
 Ctrl+a, x で終了する。Ctrl+a, c で qemu monitor を切り替える。
@@ -38,30 +31,21 @@ Ctrl+a, x で終了する。Ctrl+a, c で qemu monitor を切り替える。
 ## QEMU と gdb でデバッグ
 
 ```sh
-qemu-system-riscv64 \
-  -machine virt \
-  -cpu rv64 \
-  -m 128M \
-  -smp 1 \
-  -nographic \
-  -bios default \
-  -kernel target/riscv64gc-unknown-none-elf/debug/rkrv \
-  -S \
-  -gdb tcp::1234
+./scripts/qemu_debug
 ```
 
 QEMU を起動し、CPU を一時停止させる。1234 番ポートで gdb を待ち受ける。
 
 ```sh
-RUST_GDB=gdb-multiarch rust-gdb target/riscv64gc-unknown-none-elf/debug/rkrv -ex "set architecture riscv:rv64" -ex "target remote :1234"
+./scripts/gdb
 ```
 
-gdb を起動する。
+gdb を起動し、QEMU に接続する。
 
 ↓のような感じで普通にデバッグできる。素晴らしい。
 
 ```
-$ RUST_GDB=gdb-multiarch rust-gdb target/riscv64gc-unknown-none-elf/debug/rkrv -ex "set architecture riscv:rv64" -ex "target remote :1234"
+$ ./scripts/gdb
 GNU gdb (Ubuntu 15.1-1ubuntu1~24.04.1) 15.1
 Copyright (C) 2024 Free Software Foundation, Inc.
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>

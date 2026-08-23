@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euxo pipefail
+cd "$(dirname "$0")"
+cd ..
+
+RUST_GDB=gdb-multiarch rust-gdb target/riscv64gc-unknown-none-elf/debug/rkrv -ex "set architecture riscv:rv64" -ex "target remote :1234"
