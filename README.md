@@ -23,7 +23,7 @@ cargo b
 ## QEMU で起動
 
 ```sh
-cargo make qemu
+./scripts/qemu.py
 ```
 
 Ctrl+a, x で終了する。Ctrl+a, c で qemu monitor を切り替える。
@@ -31,13 +31,13 @@ Ctrl+a, x で終了する。Ctrl+a, c で qemu monitor を切り替える。
 ## QEMU と gdb でデバッグ
 
 ```sh
-cargo make qemu_debug
+./scripts/qemu.py -S
 ```
 
 QEMU を起動し、CPU を一時停止させる。1234 番ポートで gdb を待ち受ける。
 
 ```sh
-cargo make gdb
+./scripts/gdb.py
 ```
 
 gdb を起動し、QEMU に接続する。
