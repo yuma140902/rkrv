@@ -1,5 +1,5 @@
 [package]
-name = "rvrk"
+name = "rkrv"
 version = "0.1.0"
 edition = "2024"
 publish = false
@@ -11,7 +11,7 @@ test = false
 
 [[bin]]
 bench = false
-name = "rvrk"
+name = "rkrv"
 test = false
 
 [dependencies]
