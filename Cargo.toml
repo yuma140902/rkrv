@@ -5,4 +5,19 @@ edition = "2024"
 publish = false
 resolver = "3"
 
+[lib]
+bench = false
+test = false
+
+[[bin]]
+bench = false
+name = "rvrk"
+test = false
+
 [dependencies]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
