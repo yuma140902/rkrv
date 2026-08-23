@@ -23,7 +23,7 @@ cargo b
 ## QEMU で起動
 
 ```sh
-./scripts/qemu
+cargo make qemu
 ```
 
 Ctrl+a, x で終了する。Ctrl+a, c で qemu monitor を切り替える。
@@ -31,13 +31,13 @@ Ctrl+a, x で終了する。Ctrl+a, c で qemu monitor を切り替える。
 ## QEMU と gdb でデバッグ
 
 ```sh
-./scripts/qemu_debug
+cargo make qemu_debug
 ```
 
 QEMU を起動し、CPU を一時停止させる。1234 番ポートで gdb を待ち受ける。
 
 ```sh
-./scripts/gdb
+cargo make gdb
 ```
 
 gdb を起動し、QEMU に接続する。
@@ -45,7 +45,7 @@ gdb を起動し、QEMU に接続する。
 ↓のような感じで普通にデバッグできる。素晴らしい。
 
 ```
-$ ./scripts/gdb
+$ cargo make gdb
 GNU gdb (Ubuntu 15.1-1ubuntu1~24.04.1) 15.1
 Copyright (C) 2024 Free Software Foundation, Inc.
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
