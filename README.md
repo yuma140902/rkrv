@@ -4,6 +4,8 @@ Rust Kernel for RISC-V
 
 ## 開発環境のセットアップ
 
+x86_64 の Ubuntu 24.04 を前提にする。
+
 ```sh
 sudo update
 # 参考: [Install Ubuntu on QEMU (RISC-V) - Ubuntu hardware support documentation](https://ubuntu.com/hardware/docs/boards/how-to/ubuntu_supported/qemu-riscv/)
@@ -19,6 +21,18 @@ mise i
 ```sh
 cargo b
 ```
+
+## テスト
+
+とりあえずテストは x86_64 の環境で実行することにする。
+
+```sh
+cargo test --target x86_64-unknown-linux-gnu
+```
+
+`#[cfg(test)]` なコードについて rust analyzer が警告を出す。これを消したい場合は、.cargo/config.toml の `target = ` の部分を一時的に消すとよい。
+
+TODO: アーキテクチャ依存部分を分ける
 
 ## QEMU で起動
 

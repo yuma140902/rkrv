@@ -7,7 +7,6 @@ resolver = "3"
 
 [lib]
 bench = false
-test = false
 
 [[bin]]
 bench = false
