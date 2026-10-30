@@ -5,10 +5,13 @@
 #![no_main]
 #![feature(riscv_ext_intrinsics)]
 
+use rkrv::sched;
+
 core::arch::global_asm!(
     r#"
     .section .text.entry
     .globl _start
+    .type _start, @function
 _start:
     .option push
     .option norelax
@@ -57,8 +60,32 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
         print_uart0(&usize_to_hex((&raw const __bss_end) as usize));
         print_uart0(b"\n");
     }
+    unsafe {
+        sched::init_task(&mut sched::TASKS[0], task1);
+        sched::init_task(&mut sched::TASKS[1], task2);
+        sched::load_task_context(&sched::TASKS[0]);
+    }
+    #[allow(unreachable_code)]
     loop {
         unsafe { core::arch::riscv64::wfi() }
+    }
+}
+
+extern "C" fn task1() {
+    unsafe {
+        loop {
+            print_uart0(b"task1 start\n");
+            sched::switch_tasks(&sched::TASKS[0], &sched::TASKS[1]);
+        }
+    }
+}
+
+extern "C" fn task2() {
+    unsafe {
+        loop {
+            print_uart0(b"task2 start\n");
+            sched::switch_tasks(&sched::TASKS[1], &sched::TASKS[0]);
+        }
     }
 }
 

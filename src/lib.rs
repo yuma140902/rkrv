@@ -2,3 +2,5 @@
 #![deny(clippy::all)]
 #![deny(clippy::nursery)]
 #![no_std]
+
+pub mod sched;
