@@ -10,7 +10,11 @@ core::arch::global_asm!(
     .section .text.entry
     .globl _start
 _start:
+    .option push
+    .option norelax
+    la gp, __global_pointer$
     la sp, boot_stack_top
+    .option pop
 
     la t0, __bss_start
     la t1, __bss_end

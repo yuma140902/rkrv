@@ -18,6 +18,19 @@ SECTIONS
         *(.data .data.*)
     }
 
+    .sdata : ALIGN(4K) {
+        __sdata_start = .;
+        __global_pointer$ = . + 0x800;
+        *(.sdata .sdata.*)
+        __sdata_end = .;
+    }
+
+    .sbss : ALIGN(4K) {
+      __sbss_start = .;
+      *(.sbss .sbss.*)
+      __sbss_end = .;
+    }
+
     .bss : ALIGN(4K) {
         __bss_start = .;
         *(.bss.stack)
