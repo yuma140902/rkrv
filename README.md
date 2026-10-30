@@ -22,18 +22,6 @@ mise i
 cargo b
 ```
 
-## テスト
-
-とりあえずテストは x86_64 の環境で実行することにする。
-
-```sh
-cargo test --target x86_64-unknown-linux-gnu
-```
-
-`#[cfg(test)]` なコードについて rust analyzer が警告を出す。これを消したい場合は、.cargo/config.toml の `target = ` の部分を一時的に消すとよい。
-
-TODO: アーキテクチャ依存部分を分ける
-
 ## QEMU で起動
 
 ```sh
