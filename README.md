@@ -47,7 +47,8 @@ gdb を起動し、QEMU に接続する。
 ↓のような感じで普通にデバッグできる。素晴らしい。
 
 ```
-$ cargo make gdb
+$ ./scripts/qemu.py -S
+$ ./scripts/gdb.py
 GNU gdb (Ubuntu 15.1-1ubuntu1~24.04.1) 15.1
 Copyright (C) 2024 Free Software Foundation, Inc.
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
