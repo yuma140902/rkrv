@@ -11,11 +11,21 @@ core::arch::global_asm!(
     .globl _start
 _start:
     la sp, boot_stack_top
+
+    la t0, __bss_start
+    la t1, __bss_end
+1:
+    bgeu t0, t1, 2f
+    sd zero, 0(t0)
+    addi t0, t0, 8
+    j 1b
+
+2:
     call rust_main
 
-1:
+3:
     wfi
-    j 1b
+    j 3b
 
     .section .bss.stack, "aw", @nobits
     .align 12
@@ -25,9 +35,24 @@ boot_stack_top:
 "#
 );
 
+unsafe extern "C" {
+    static __bss_start: u8;
+    static __bss_end: u8;
+}
+
 #[unsafe(no_mangle)]
 extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
-    unsafe { print_uart0("rkrv rust_main\n") };
+    unsafe {
+        print_uart0(b"rkrv rust_main\n");
+
+        print_uart0(b"__bss_start: ");
+        print_uart0(&usize_to_hex((&raw const __bss_start) as usize));
+        print_uart0(b"\n");
+
+        print_uart0(b"__bss_end: ");
+        print_uart0(&usize_to_hex((&raw const __bss_end) as usize));
+        print_uart0(b"\n");
+    }
     loop {
         unsafe { core::arch::riscv64::wfi() }
     }
@@ -43,11 +68,30 @@ fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
 /// # Safety
 ///
 /// QEMU virt machine で実行していること
-unsafe fn print_uart0(s: &str) {
-    for c in s.bytes() {
+unsafe fn print_uart0(s: &[u8]) {
+    for &c in s {
         // SAFETY: QEMU virt machine は 0x1000_0000 に UART0 がマップされている
         unsafe {
             core::ptr::write_volatile(0x1000_0000 as *mut u8, c);
         }
     }
+}
+
+fn usize_to_hex(n: usize) -> [u8; 18] {
+    const {
+        assert!(core::mem::size_of::<usize>() == 8);
+    }
+    let mut buf = [0u8; 18];
+    buf[0] = b'0';
+    buf[1] = b'x';
+    for i in 0..16 {
+        let shift = (15 - i) * 4;
+        let digit = ((n >> shift) & 0xf) as u8;
+        buf[i + 2] = if digit < 10 {
+            b'0' + digit
+        } else {
+            b'a' + (digit - 10)
+        };
+    }
+    buf
 }
