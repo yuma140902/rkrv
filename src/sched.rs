@@ -28,7 +28,8 @@ pub struct Context {
     ra: u64,
 }
 
-pub static mut TASKS: [Task; 2] = [
+pub const NR_TASKS: usize = 2;
+static mut TASKS: [Task; NR_TASKS] = [
     Task {
         sp: UnsafeCell::new(0),
         stack: UnsafeCell::new(TaskStack([0; STACK_SIZE])),
@@ -39,7 +40,14 @@ pub static mut TASKS: [Task; 2] = [
     },
 ];
 
-pub fn init_task(task: &mut Task, entry: extern "C" fn()) {
+pub fn init_task(tid: usize, entry: extern "C" fn()) {
+    if tid >= NR_TASKS {
+        panic!(
+            "Task ID {} exceeds the maximum number of tasks {}",
+            tid, NR_TASKS
+        );
+    }
+    let task = unsafe { &mut TASKS[tid] };
     let stack_top = task.stack.get() as usize + STACK_SIZE;
     let context = Context {
         s0: 0,
@@ -63,13 +71,16 @@ pub fn init_task(task: &mut Task, entry: extern "C" fn()) {
     task.sp = UnsafeCell::new(context_ptr as u64);
 }
 
-pub fn switch_tasks(current: &Task, next: &Task) {
+pub fn switch_tasks(current_tid: usize, next_tid: usize) {
+    let current = unsafe { &TASKS[current_tid] };
+    let next = unsafe { &TASKS[next_tid] };
     unsafe {
         swtch(current.sp.get(), next.sp.get());
     }
 }
 
-pub fn load_task_context(task: &Task) -> ! {
+pub fn load_task_context(tid: usize) -> ! {
+    let task = unsafe { &TASKS[tid] };
     unsafe {
         load_context(task.sp.get());
     }
