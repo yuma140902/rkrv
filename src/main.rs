@@ -60,30 +60,8 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
         print_uart0(&usize_to_hex((&raw const __bss_end) as usize));
         print_uart0(b"\n");
     }
-    sched::init_task(0, task1);
-    sched::init_task(1, task2);
-    sched::load_task_context(0);
-    #[allow(unreachable_code)]
     loop {
         unsafe { core::arch::riscv64::wfi() }
-    }
-}
-
-extern "C" fn task1() {
-    unsafe {
-        loop {
-            print_uart0(b"task1 start\n");
-            sched::switch_tasks(0, 1);
-        }
-    }
-}
-
-extern "C" fn task2() {
-    unsafe {
-        loop {
-            print_uart0(b"task2 start\n");
-            sched::switch_tasks(1, 0);
-        }
     }
 }
 

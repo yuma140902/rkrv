@@ -144,3 +144,32 @@ unsafe extern "C" {
     fn swtch(current: *mut u64, next: *const u64);
     fn load_context(task_sp: *const u64) -> !;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn context_switch_test() {
+        init_task(0, task1);
+        init_task(1, task2);
+        load_task_context(0);
+    }
+
+    extern "C" fn task1() {
+        unsafe {
+            loop {
+                crate::print_uart0(b"task1 start\n");
+                switch_tasks(0, 1);
+            }
+        }
+    }
+
+    extern "C" fn task2() {
+        unsafe {
+            loop {
+                crate::print_uart0(b"task2 start\n");
+                switch_tasks(1, 0);
+            }
+        }
+    }
+}
