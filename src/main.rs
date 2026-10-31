@@ -5,7 +5,7 @@
 #![no_main]
 #![feature(riscv_ext_intrinsics)]
 
-use rkrv::sched;
+use rkrv::{print_uart0, sched, usize_to_hex};
 
 core::arch::global_asm!(
     r#"
@@ -92,35 +92,4 @@ fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     loop {
         unsafe { core::arch::riscv64::wfi() }
     }
-}
-
-/// # Safety
-///
-/// QEMU virt machine で実行していること
-unsafe fn print_uart0(s: &[u8]) {
-    for &c in s {
-        // SAFETY: QEMU virt machine は 0x1000_0000 に UART0 がマップされている
-        unsafe {
-            core::ptr::write_volatile(0x1000_0000 as *mut u8, c);
-        }
-    }
-}
-
-fn usize_to_hex(n: usize) -> [u8; 18] {
-    const {
-        assert!(core::mem::size_of::<usize>() == 8);
-    }
-    let mut buf = [0u8; 18];
-    buf[0] = b'0';
-    buf[1] = b'x';
-    for i in 0..16 {
-        let shift = (15 - i) * 4;
-        let digit = ((n >> shift) & 0xf) as u8;
-        buf[i + 2] = if digit < 10 {
-            b'0' + digit
-        } else {
-            b'a' + (digit - 10)
-        };
-    }
-    buf
 }
