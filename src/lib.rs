@@ -2,7 +2,6 @@
 #![deny(clippy::all)]
 #![deny(clippy::nursery)]
 #![no_std]
-#![feature(riscv_ext_intrinsics)]
 
 pub mod sched;
 
