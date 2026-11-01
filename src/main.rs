@@ -5,7 +5,7 @@
 #![no_main]
 #![feature(riscv_ext_intrinsics)]
 
-use rkrv::{print_uart0, trap, u64_to_hex, usize_to_hex};
+use rkrv::{print_uart0, trap, usize_to_hex};
 
 core::arch::global_asm!(
     r#"
