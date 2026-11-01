@@ -33,6 +33,7 @@ _start:
 3:
     wfi
     j 3b
+    .size _start, .-_start
 
     .section .bss.stack, "aw", @nobits
     .align 12

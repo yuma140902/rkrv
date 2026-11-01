@@ -133,7 +133,7 @@ swtch:
     ld  ra, 96(sp)
     addi sp, sp, 104
     ret
-
+    .size swtch, .-swtch
 
     .globl load_context
     .type load_context, @function
@@ -142,6 +142,7 @@ load_context:
     // a0: &mut Task->sp
     ld sp, 0(a0)
     j 1b
+    .size load_context, .-load_context
     "##
 );
 

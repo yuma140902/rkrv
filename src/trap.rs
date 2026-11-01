@@ -123,5 +123,6 @@ trap_handler_wrapper:
     addi sp, sp, 256
 
     sret
+    .size trap_handler_wrapper, .-trap_handler_wrapper
     "##
 );
