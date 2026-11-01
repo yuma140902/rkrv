@@ -5,7 +5,7 @@
 #![no_main]
 #![feature(riscv_ext_intrinsics)]
 
-use rkrv::{print_uart0, usize_to_hex};
+use rkrv::{print_uart0, trap, u64_to_hex, usize_to_hex};
 
 core::arch::global_asm!(
     r#"
@@ -59,6 +59,11 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
         print_uart0(b"__bss_end: ");
         print_uart0(&usize_to_hex((&raw const __bss_end) as usize));
         print_uart0(b"\n");
+    }
+    trap::init_trap();
+    unsafe {
+        core::arch::asm!("ebreak");
+        print_uart0(b"ebreak executed\n");
     }
     loop {
         unsafe { core::arch::riscv64::wfi() }

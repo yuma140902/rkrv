@@ -4,6 +4,7 @@
 #![no_std]
 
 pub mod sched;
+pub mod trap;
 
 /// # Safety
 ///
@@ -34,4 +35,8 @@ pub fn usize_to_hex(n: usize) -> [u8; 18] {
         };
     }
     buf
+}
+
+pub fn u64_to_hex(n: u64) -> [u8; 18] {
+    usize_to_hex(n as usize)
 }
