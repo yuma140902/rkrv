@@ -5,7 +5,7 @@
 #![no_main]
 #![feature(riscv_ext_intrinsics)]
 
-use rkrv::{print_uart0, trap, usize_to_hex};
+use rkrv::{print_uart0, sched, trap, usize_to_hex};
 
 core::arch::global_asm!(
     r#"
@@ -62,9 +62,20 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
         print_uart0(b"\n");
     }
     trap::init_trap();
+
+    sched::init_task(0, rust_main_task);
+    sched::load_task_context(0);
+
+    #[allow(unreachable_code)]
+    loop {
+        unsafe { core::arch::asm!("ebreak") }
+    }
+}
+
+extern "C" fn rust_main_task() {
     unsafe {
+        print_uart0(b"rkrv rust_main_task\n");
         core::arch::asm!("ebreak");
-        print_uart0(b"ebreak executed\n");
     }
     loop {
         unsafe { core::arch::riscv64::wfi() }
