@@ -5,6 +5,8 @@
 #![no_main]
 #![feature(riscv_ext_intrinsics)]
 
+extern crate alloc;
+
 use rkrv::{print_uart0, sched, trap, usize_to_hex};
 
 core::arch::global_asm!(
@@ -56,7 +58,18 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
         print_uart0(&usize_to_hex((&raw const rkrv::__bss_end) as usize));
         print_uart0(b"\n");
     }
+    unsafe {
+        rkrv::alloc::init((&raw const rkrv::__bss_end) as u64);
+    }
     trap::init_trap();
+
+    let v = alloc::vec![1, 2, 3, 4, 5];
+    for vi in v {
+        unsafe {
+            print_uart0(&usize_to_hex(vi));
+            print_uart0(b"\n");
+        }
+    }
 
     sched::init_task(0, rust_main_task);
     sched::load_task_context(0);

@@ -2,7 +2,10 @@
 #![deny(clippy::all)]
 #![deny(clippy::nursery)]
 #![no_std]
+#![feature(riscv_ext_intrinsics)]
+#![feature(alloc_error_handler)]
 
+pub mod alloc;
 pub mod sched;
 pub mod trap;
 
