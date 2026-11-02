@@ -37,7 +37,12 @@ extern "C" fn trap_handler() {
             print_uart0(b"  interrupt\n");
         } else {
             print_uart0(b"  exception\n");
-            core::arch::asm!("csrw sepc, {}", in(reg) sepc + 4);
+            if scause == 8 {
+                // TODO: handle ecall
+                core::arch::asm!("csrw sepc, {}", in(reg) sepc + 4);
+            } else {
+                panic!();
+            }
         }
     }
 }
