@@ -6,6 +6,11 @@
 pub mod sched;
 pub mod trap;
 
+unsafe extern "C" {
+    pub static __bss_start: u8;
+    pub static __bss_end: u8;
+}
+
 /// # Safety
 ///
 /// QEMU virt machine で実行していること

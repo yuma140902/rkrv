@@ -43,22 +43,17 @@ boot_stack_top:
 "#
 );
 
-unsafe extern "C" {
-    static __bss_start: u8;
-    static __bss_end: u8;
-}
-
 #[unsafe(no_mangle)]
 extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
     unsafe {
         print_uart0(b"rkrv rust_main\n");
 
         print_uart0(b"__bss_start: ");
-        print_uart0(&usize_to_hex((&raw const __bss_start) as usize));
+        print_uart0(&usize_to_hex((&raw const rkrv::__bss_start) as usize));
         print_uart0(b"\n");
 
         print_uart0(b"__bss_end: ");
-        print_uart0(&usize_to_hex((&raw const __bss_end) as usize));
+        print_uart0(&usize_to_hex((&raw const rkrv::__bss_end) as usize));
         print_uart0(b"\n");
     }
     trap::init_trap();
