@@ -71,7 +71,8 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
         }
     }
 
-    sched::init_task(0, rust_main_task);
+    let tid = sched::new_task(rust_main_task);
+    assert!(tid == Some(0));
     unsafe {
         sched::load_task_context(0);
     }
@@ -85,10 +86,45 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
 extern "C" fn rust_main_task() {
     unsafe {
         print_uart0(b"rkrv rust_main_task\n");
-        core::arch::asm!("ebreak");
+        sched::new_task(task1).unwrap();
+        sched::new_task(task2).unwrap();
+        sched::new_task(task3).unwrap();
+        loop {
+            print_uart0(b"main\n");
+            sched::yield_task();
+        }
+        #[allow(unreachable_code)]
+        loop {
+            core::arch::asm!("ebreak");
+        }
     }
     loop {
         unsafe { core::arch::riscv64::wfi() }
+    }
+
+    extern "C" fn task1() {
+        unsafe {
+            loop {
+                print_uart0(b"1\n");
+                sched::yield_task();
+            }
+        }
+    }
+    extern "C" fn task2() {
+        unsafe {
+            loop {
+                print_uart0(b"2\n");
+                sched::yield_task();
+            }
+        }
+    }
+    extern "C" fn task3() {
+        unsafe {
+            loop {
+                print_uart0(b"3\n");
+                sched::yield_task();
+            }
+        }
     }
 }
 

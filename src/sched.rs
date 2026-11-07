@@ -35,13 +35,21 @@ static mut STACKS: [TaskStack; NR_TASKS] = [const { TaskStack([0u8; STACK_SIZE])
 static mut CURRENT_TID: usize = 0;
 static mut ROUND_ROBIN_COUNTER: usize = 0;
 
-pub fn init_task(tid: usize, entry: extern "C" fn()) {
-    if tid >= NR_TASKS {
-        panic!(
-            "Task ID {} exceeds the maximum number of tasks {}",
-            tid, NR_TASKS
-        );
+#[must_use]
+pub fn new_task(entry: extern "C" fn()) -> Option<usize> {
+    #[allow(clippy::needless_range_loop)]
+    for tid in 0..NR_TASKS {
+        unsafe {
+            if TASKS[tid].is_none() {
+                init_task(tid, entry);
+                return Some(tid);
+            }
+        }
     }
+    None
+}
+
+unsafe fn init_task(tid: usize, entry: extern "C" fn()) {
     let task_slot = unsafe { &mut TASKS[tid] };
     let task = task_slot.insert(Task {
         sp: UnsafeCell::new(0),
@@ -213,8 +221,8 @@ mod tests {
     use super::*;
 
     fn context_switch_test() {
-        init_task(0, task1);
-        init_task(1, task2);
+        new_task(task1).unwrap();
+        new_task(task2).unwrap();
         unsafe {
             load_task_context(0);
         }
