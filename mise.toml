@@ -1,2 +1,3 @@
 [tools]
+"cargo:rustfilt" = "0.2.2"
 rust = { version = "nightly-2026-08-16", components = "rust-src,rust-analyzer", targets = ["riscv64gc-unknown-none-elf"] }
