@@ -11,7 +11,7 @@ pub struct Task {
 #[repr(C, align(16))]
 pub struct TaskStack([u8; STACK_SIZE]);
 
-#[repr(C)]
+#[repr(C, align(16))]
 pub struct Context {
     s0: u64,
     s1: u64,
@@ -27,6 +27,7 @@ pub struct Context {
     s11: u64,
     ra: u64,
 }
+const _: () = assert!(core::mem::size_of::<Context>() == 112);
 
 pub const NR_TASKS: usize = 4;
 static mut TASKS: [Option<Task>; NR_TASKS] = [const { None }; NR_TASKS];
