@@ -1,6 +1,6 @@
 # rkrv
 
-Rust Kernel for RISC-V
+RISC-V s-mode カーネル
 
 ## 開発環境のセットアップ
 
@@ -44,7 +44,7 @@ QEMU を起動し、CPU を一時停止させる。1234 番ポートで gdb を�
 
 gdb を起動し、QEMU に接続する。
 
-↓のような感じで普通にデバッグできる。素晴らしい。
+↓のような感じで普通にデバッグできる。
 
 ```
 $ ./scripts/qemu.py -S
