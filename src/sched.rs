@@ -5,7 +5,6 @@ pub const STACK_SIZE: usize = 16 * 1024;
 #[repr(C)]
 pub struct Task {
     sp: UnsafeCell<u64>,
-    stack: UnsafeCell<TaskStack>,
 }
 
 #[repr(C, align(16))]
@@ -29,16 +28,8 @@ pub struct Context {
 }
 
 pub const NR_TASKS: usize = 2;
-static mut TASKS: [Task; NR_TASKS] = [
-    Task {
-        sp: UnsafeCell::new(0),
-        stack: UnsafeCell::new(TaskStack([0; STACK_SIZE])),
-    },
-    Task {
-        sp: UnsafeCell::new(0),
-        stack: UnsafeCell::new(TaskStack([0; STACK_SIZE])),
-    },
-];
+static mut TASKS: [Option<Task>; NR_TASKS] = [None, None];
+static mut STACKS: [TaskStack; NR_TASKS] = [const { TaskStack([0u8; STACK_SIZE]) }; NR_TASKS];
 
 pub fn init_task(tid: usize, entry: extern "C" fn()) {
     if tid >= NR_TASKS {
@@ -47,8 +38,11 @@ pub fn init_task(tid: usize, entry: extern "C" fn()) {
             tid, NR_TASKS
         );
     }
-    let task = unsafe { &mut TASKS[tid] };
-    let stack_top = task.stack.get() as usize + STACK_SIZE;
+    let task_slot = unsafe { &mut TASKS[tid] };
+    let task = task_slot.insert(Task {
+        sp: UnsafeCell::new(0),
+    });
+    let stack_top = unsafe { (&raw mut STACKS[tid]) as usize + STACK_SIZE };
     let context = Context {
         s0: 0,
         s1: 0,
@@ -72,15 +66,15 @@ pub fn init_task(tid: usize, entry: extern "C" fn()) {
 }
 
 pub fn switch_tasks(current_tid: usize, next_tid: usize) {
-    let current = unsafe { &TASKS[current_tid] };
-    let next = unsafe { &TASKS[next_tid] };
+    let current = unsafe { TASKS[current_tid].as_ref().unwrap() };
+    let next = unsafe { TASKS[next_tid].as_ref().unwrap() };
     unsafe {
         swtch(current.sp.get(), next.sp.get());
     }
 }
 
 pub fn load_task_context(tid: usize) -> ! {
-    let task = unsafe { &TASKS[tid] };
+    let task = unsafe { TASKS[tid].as_ref().unwrap() };
     unsafe {
         load_context(task.sp.get());
     }
