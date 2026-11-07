@@ -48,7 +48,7 @@ extern "C" fn trap_handler() {
 }
 
 static mut INTERRUPT_DISABLE_COUNTER: usize = 0;
-static mut ORIGINAL_SIE: bool = true;
+static mut ORIGINAL_SIE_BIT: bool = true;
 
 /// # Safety
 ///
@@ -59,7 +59,7 @@ pub unsafe fn push_disable_interrupt() {
         if INTERRUPT_DISABLE_COUNTER == 0 {
             // SIE bit (bit 1) をクリア
             core::arch::asm!("csrrc {}, sstatus, {}", out(reg) sstatus, in(reg) 1_u64 << 1);
-            ORIGINAL_SIE = (sstatus & (1_u64 << 1)) != 0;
+            ORIGINAL_SIE_BIT = (sstatus & (1_u64 << 1)) != 0;
         }
         INTERRUPT_DISABLE_COUNTER += 1;
     }
@@ -74,7 +74,7 @@ pub unsafe fn pop_enable_interrupt() {
             panic!("pop_enable_interrupt called without matching push_disable_interrupt");
         }
         INTERRUPT_DISABLE_COUNTER -= 1;
-        if INTERRUPT_DISABLE_COUNTER == 0 && ORIGINAL_SIE {
+        if INTERRUPT_DISABLE_COUNTER == 0 && ORIGINAL_SIE_BIT {
             // SIE bit (bit 1) をセット
             core::arch::asm!("csrrs zero, sstatus, {}", in(reg) 1_u64 << 1);
         }
