@@ -5,6 +5,7 @@ pub const STACK_SIZE: usize = 16 * 1024;
 #[repr(C)]
 pub struct Task {
     sp: UnsafeCell<u64>,
+    entry: extern "C" fn(),
 }
 
 #[repr(C, align(16))]
@@ -43,6 +44,7 @@ pub fn init_task(tid: usize, entry: extern "C" fn()) {
     let task_slot = unsafe { &mut TASKS[tid] };
     let task = task_slot.insert(Task {
         sp: UnsafeCell::new(0),
+        entry,
     });
     let stack_top = unsafe { (&raw mut STACKS[tid]) as usize + STACK_SIZE };
     let context = Context {
@@ -58,7 +60,7 @@ pub fn init_task(tid: usize, entry: extern "C" fn()) {
         s9: 0,
         s10: 0,
         s11: 0,
-        ra: entry as usize as u64,
+        ra: task_trampoline as *const () as u64,
     };
     let context_ptr = (stack_top - core::mem::size_of::<Context>()) as *mut Context;
     unsafe {
@@ -92,8 +94,20 @@ pub fn yield_task() {
 
     unsafe {
         assert!(next_tid != current_tid);
-        CURRENT_TID = next_tid;
         switch_tasks(current_tid, next_tid);
+    }
+}
+
+unsafe fn on_context_switch_pre(next_tid: usize) {
+    unsafe {
+        crate::trap::push_disable_interrupt();
+        CURRENT_TID = next_tid;
+    }
+}
+
+unsafe fn on_context_switch_post() {
+    unsafe {
+        crate::trap::pop_enable_interrupt();
     }
 }
 
@@ -102,10 +116,12 @@ pub fn yield_task() {
 /// - current_tid と next_tid が初期化済みのタスク ID であること
 /// - current_tid と next_tid が同じでないこと
 unsafe fn switch_tasks(current_tid: usize, next_tid: usize) {
-    let current = unsafe { TASKS[current_tid].as_ref().unwrap() };
-    let next = unsafe { TASKS[next_tid].as_ref().unwrap() };
     unsafe {
+        on_context_switch_pre(next_tid);
+        let current = TASKS[current_tid].as_ref().unwrap();
+        let next = TASKS[next_tid].as_ref().unwrap();
         swtch(current.sp.get(), next.sp.get());
+        on_context_switch_post();
     }
 }
 
@@ -115,8 +131,19 @@ unsafe fn switch_tasks(current_tid: usize, next_tid: usize) {
 pub unsafe fn load_task_context(tid: usize) -> ! {
     let task = unsafe { TASKS[tid].as_ref().unwrap() };
     unsafe {
-        CURRENT_TID = tid;
+        on_context_switch_pre(tid);
         load_context(task.sp.get());
+    }
+}
+
+extern "C" fn task_trampoline() -> ! {
+    unsafe {
+        on_context_switch_post();
+    }
+    let entry = unsafe { TASKS[CURRENT_TID].as_ref().unwrap().entry };
+    entry();
+    loop {
+        yield_task();
     }
 }
 
@@ -134,7 +161,7 @@ core::arch::global_asm!(
 swtch:
     // a0: current: &mut Task->sp, a1: next: &Task->sp
 
-    addi sp, sp, -104
+    addi sp, sp, -112
     sd  s0,  0(sp)
     sd  s1,  8(sp)
     sd  s2, 16(sp)
@@ -165,7 +192,7 @@ swtch:
     ld s10, 80(sp)
     ld s11, 88(sp)
     ld  ra, 96(sp)
-    addi sp, sp, 104
+    addi sp, sp, 112
     ret
     .size swtch, .-swtch
 
