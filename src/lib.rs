@@ -6,6 +6,7 @@
 #![feature(alloc_error_handler)]
 
 pub mod alloc;
+pub mod sbi;
 pub mod sched;
 pub mod trap;
 
@@ -23,6 +24,18 @@ pub unsafe fn print_uart0(s: &[u8]) {
         unsafe {
             core::ptr::write_volatile(0x1000_0000 as *mut u8, c);
         }
+    }
+}
+
+/// # Safety
+///
+/// TODO
+pub unsafe fn print_uart0_hex_line(s: &[u8], n: usize) {
+    unsafe {
+        print_uart0(s);
+        print_uart0(b": ");
+        print_uart0(&usize_to_hex(n));
+        print_uart0(b"\n");
     }
 }
 

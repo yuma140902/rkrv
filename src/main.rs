@@ -7,7 +7,7 @@
 
 extern crate alloc;
 
-use rkrv::{print_uart0, sched, trap, usize_to_hex};
+use rkrv::{print_uart0, print_uart0_hex_line, sbi, sched, trap, usize_to_hex};
 
 core::arch::global_asm!(
     r#"
@@ -71,6 +71,13 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
         }
     }
 
+    unsafe {
+        // タイマー割り込みを有効化
+        core::arch::asm!("csrrs zero, sie, {}", in(reg) 1_u64 << 5);
+        // 割り込みを有効化
+        core::arch::asm!("csrrs zero, sstatus, {}", in(reg) 1_u64 << 1);
+    }
+
     let tid = sched::new_task(rust_main_task);
     assert!(tid == Some(0));
     unsafe {
@@ -86,6 +93,8 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
 extern "C" fn rust_main_task() {
     unsafe {
         print_uart0(b"rkrv rust_main_task\n");
+        let ret = sbi::set_timer_relative(10000000);
+        assert!(ret.error == 0);
         sched::new_task(task1).unwrap();
         sched::new_task(task2).unwrap();
         sched::new_task(task3).unwrap();

@@ -35,6 +35,12 @@ extern "C" fn trap_handler() {
     unsafe {
         if scause >> 63 == 1 {
             print_uart0(b"  interrupt\n");
+            if scause & 0xff == 5 {
+                print_uart0(b"    timer interrupt\n");
+                crate::sbi::set_timer(u64::MAX);
+            } else {
+                panic!();
+            }
         } else {
             print_uart0(b"  exception\n");
             if scause == 8 {
