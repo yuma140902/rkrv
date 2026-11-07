@@ -92,6 +92,7 @@ pub fn yield_task() {
 
     unsafe {
         assert!(next_tid != current_tid);
+        CURRENT_TID = next_tid;
         switch_tasks(current_tid, next_tid);
     }
 }
