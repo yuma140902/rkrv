@@ -7,7 +7,7 @@
 
 extern crate alloc;
 
-use rkrv::{print_uart0, print_uart0_hex_line, sbi, sched, trap, usize_to_hex};
+use rkrv::{print_uart0, print_uart0_hex_line, sbi, sched, trap};
 
 core::arch::global_asm!(
     r#"
@@ -49,14 +49,8 @@ boot_stack_top:
 extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
     unsafe {
         print_uart0(b"rkrv rust_main\n");
-
-        print_uart0(b"__bss_start: ");
-        print_uart0(&usize_to_hex((&raw const rkrv::__bss_start) as usize));
-        print_uart0(b"\n");
-
-        print_uart0(b"__bss_end: ");
-        print_uart0(&usize_to_hex((&raw const rkrv::__bss_end) as usize));
-        print_uart0(b"\n");
+        print_uart0_hex_line("__bss_start", (&raw const rkrv::__bss_start) as usize);
+        print_uart0_hex_line("__bss_end  ", (&raw const rkrv::__bss_end) as usize);
     }
     unsafe {
         rkrv::alloc::init((&raw const rkrv::__bss_end) as u64);
@@ -66,8 +60,7 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
     let v = alloc::vec![1, 2, 3, 4, 5];
     for vi in v {
         unsafe {
-            print_uart0(&usize_to_hex(vi));
-            print_uart0(b"\n");
+            print_uart0_hex_line("vec element", vi);
         }
     }
 
@@ -94,6 +87,9 @@ extern "C" fn rust_main_task() {
     unsafe {
         print_uart0(b"rkrv rust_main_task\n");
         let ret = sbi::set_timer_relative(10000000);
+        loop {
+            core::arch::asm!("wfi");
+        }
         assert!(ret.error == 0);
         sched::new_task(task1).unwrap();
         sched::new_task(task2).unwrap();

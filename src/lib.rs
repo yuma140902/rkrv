@@ -30,9 +30,9 @@ pub unsafe fn print_uart0(s: &[u8]) {
 /// # Safety
 ///
 /// TODO
-pub unsafe fn print_uart0_hex_line(s: &[u8], n: usize) {
+pub unsafe fn print_uart0_hex_line(s: &str, n: usize) {
     unsafe {
-        print_uart0(s);
+        print_uart0(s.as_bytes());
         print_uart0(b": ");
         print_uart0(&usize_to_hex(n));
         print_uart0(b"\n");
@@ -56,8 +56,4 @@ pub fn usize_to_hex(n: usize) -> [u8; 18] {
         };
     }
     buf
-}
-
-pub fn u64_to_hex(n: u64) -> [u8; 18] {
-    usize_to_hex(n as usize)
 }

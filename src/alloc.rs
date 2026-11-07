@@ -1,5 +1,7 @@
 use core::sync::atomic::AtomicU64;
 
+use crate::print_uart0_hex_line;
+
 #[global_allocator]
 pub static KALLOC: KAlloc = KAlloc::uninitialized();
 
@@ -29,15 +31,9 @@ fn on_alloc_error(_l: core::alloc::Layout) -> ! {
 
 unsafe impl core::alloc::GlobalAlloc for KAlloc {
     unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
-        use crate::print_uart0;
-        use crate::usize_to_hex;
         unsafe {
-            print_uart0(b"ALLOC size: ");
-            print_uart0(&usize_to_hex(layout.size()));
-            print_uart0(b"\n");
-            print_uart0(b"ALLOC align: ");
-            print_uart0(&usize_to_hex(layout.align()));
-            print_uart0(b"\n");
+            print_uart0_hex_line("ALLOC size ", layout.size());
+            print_uart0_hex_line("ALLOC align", layout.align());
         }
         let size = layout.size() as u64;
         let align = layout.align() as u64;
@@ -46,9 +42,7 @@ unsafe impl core::alloc::GlobalAlloc for KAlloc {
         for i in 0.. {
             if (current + i).is_multiple_of(align) {
                 unsafe {
-                    print_uart0(b"ALLOC found aligned address: ");
-                    print_uart0(&usize_to_hex((current + i) as usize));
-                    print_uart0(b"\n");
+                    print_uart0_hex_line("ALLOC found aligned address", (current + i) as usize);
                 }
                 let new_current = current + i + size;
                 self.current

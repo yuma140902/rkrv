@@ -1,4 +1,4 @@
-use crate::{print_uart0, u64_to_hex};
+use crate::{print_uart0, print_uart0_hex_line};
 
 pub fn init_trap() {
     unsafe {
@@ -24,20 +24,18 @@ extern "C" fn trap_handler() {
         core::arch::asm!("csrr {}, stval", out(reg) stval);
     }
     unsafe {
-        print_uart0(b"trap_handler:\n  sepc=");
-        print_uart0(&u64_to_hex(sepc));
-        print_uart0(b"\n  scause=");
-        print_uart0(&u64_to_hex(scause));
-        print_uart0(b"\n  stval=");
-        print_uart0(&u64_to_hex(stval));
-        print_uart0(b"\n");
+        print_uart0(b"trap_handler:\n");
+        print_uart0_hex_line("  spec  ", sepc as usize);
+        print_uart0_hex_line("  scause", scause as usize);
+        print_uart0_hex_line("  stval ", stval as usize);
     }
     unsafe {
         if scause >> 63 == 1 {
             print_uart0(b"  interrupt\n");
             if scause & 0xff == 5 {
                 print_uart0(b"    timer interrupt\n");
-                crate::sbi::set_timer(u64::MAX);
+                let ret = crate::sbi::set_timer(u64::MAX);
+                assert!(ret.error == 0);
             } else {
                 panic!();
             }
