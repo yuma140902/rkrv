@@ -47,6 +47,55 @@ extern "C" fn trap_handler() {
     }
 }
 
+static mut INTERRUPT_DISABLE_COUNTER: usize = 0;
+static mut ORIGINAL_SIE: bool = true;
+
+/// # Safety
+///
+/// [`pop_enable_interrupt`] とペアで呼び出す必要がある
+pub unsafe fn push_disable_interrupt() {
+    let sstatus: u64;
+    unsafe {
+        if INTERRUPT_DISABLE_COUNTER == 0 {
+            // SIE bit (bit 1) をクリア
+            core::arch::asm!("csrrc {}, sstatus, {}", out(reg) sstatus, in(reg) 1_u64 << 1);
+            ORIGINAL_SIE = (sstatus & (1_u64 << 1)) != 0;
+        }
+        INTERRUPT_DISABLE_COUNTER += 1;
+    }
+}
+
+/// # Safety
+///
+/// [`push_disable_interrupt`] とペアで呼び出す必要がある
+pub unsafe fn pop_enable_interrupt() {
+    unsafe {
+        if INTERRUPT_DISABLE_COUNTER == 0 {
+            panic!("pop_enable_interrupt called without matching push_disable_interrupt");
+        }
+        INTERRUPT_DISABLE_COUNTER -= 1;
+        if INTERRUPT_DISABLE_COUNTER == 0 && ORIGINAL_SIE {
+            // SIE bit (bit 1) をセット
+            core::arch::asm!("csrrs zero, sstatus, {}", in(reg) 1_u64 << 1);
+        }
+    }
+}
+
+pub struct InterruptGuard(());
+
+impl Default for InterruptGuard {
+    fn default() -> Self {
+        unsafe { push_disable_interrupt() }
+        Self(())
+    }
+}
+
+impl Drop for InterruptGuard {
+    fn drop(&mut self) {
+        unsafe { pop_enable_interrupt() }
+    }
+}
+
 unsafe extern "C" {
     fn trap_handler_wrapper() -> !;
 }
