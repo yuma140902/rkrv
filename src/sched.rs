@@ -115,6 +115,7 @@ unsafe fn switch_tasks(current_tid: usize, next_tid: usize) {
 pub unsafe fn load_task_context(tid: usize) -> ! {
     let task = unsafe { TASKS[tid].as_ref().unwrap() };
     unsafe {
+        CURRENT_TID = tid;
         load_context(task.sp.get());
     }
 }
