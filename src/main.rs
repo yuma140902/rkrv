@@ -72,7 +72,9 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
     }
 
     sched::init_task(0, rust_main_task);
-    sched::load_task_context(0);
+    unsafe {
+        sched::load_task_context(0);
+    }
 
     #[allow(unreachable_code)]
     loop {

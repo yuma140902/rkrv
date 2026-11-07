@@ -27,9 +27,11 @@ pub struct Context {
     ra: u64,
 }
 
-pub const NR_TASKS: usize = 2;
-static mut TASKS: [Option<Task>; NR_TASKS] = [None, None];
+pub const NR_TASKS: usize = 4;
+static mut TASKS: [Option<Task>; NR_TASKS] = [const { None }; NR_TASKS];
 static mut STACKS: [TaskStack; NR_TASKS] = [const { TaskStack([0u8; STACK_SIZE]) }; NR_TASKS];
+static mut CURRENT_TID: usize = 0;
+static mut ROUND_ROBIN_COUNTER: usize = 0;
 
 pub fn init_task(tid: usize, entry: extern "C" fn()) {
     if tid >= NR_TASKS {
@@ -65,7 +67,40 @@ pub fn init_task(tid: usize, entry: extern "C" fn()) {
     task.sp = UnsafeCell::new(context_ptr as u64);
 }
 
-pub fn switch_tasks(current_tid: usize, next_tid: usize) {
+fn pick_next_task(current_tid: usize) -> Option<usize> {
+    for i in 0..NR_TASKS {
+        let tid = (unsafe { ROUND_ROBIN_COUNTER } + i) % NR_TASKS;
+        if tid == current_tid {
+            continue;
+        }
+        if unsafe { TASKS[tid].is_some() } {
+            unsafe {
+                ROUND_ROBIN_COUNTER = (tid + 1) % NR_TASKS;
+            }
+            return Some(tid);
+        }
+    }
+    None
+}
+
+pub fn yield_task() {
+    let current_tid = unsafe { CURRENT_TID };
+    let next_tid = match pick_next_task(current_tid) {
+        Some(tid) => tid,
+        None => return,
+    };
+
+    unsafe {
+        assert!(next_tid != current_tid);
+        switch_tasks(current_tid, next_tid);
+    }
+}
+
+/// # Safety
+///
+/// - current_tid と next_tid が初期化済みのタスク ID であること
+/// - current_tid と next_tid が同じでないこと
+unsafe fn switch_tasks(current_tid: usize, next_tid: usize) {
     let current = unsafe { TASKS[current_tid].as_ref().unwrap() };
     let next = unsafe { TASKS[next_tid].as_ref().unwrap() };
     unsafe {
@@ -73,7 +108,10 @@ pub fn switch_tasks(current_tid: usize, next_tid: usize) {
     }
 }
 
-pub fn load_task_context(tid: usize) -> ! {
+/// # Safety
+///
+/// - tid が初期化済みのタスク ID であること
+pub unsafe fn load_task_context(tid: usize) -> ! {
     let task = unsafe { TASKS[tid].as_ref().unwrap() };
     unsafe {
         load_context(task.sp.get());
@@ -147,14 +185,16 @@ mod tests {
     fn context_switch_test() {
         init_task(0, task1);
         init_task(1, task2);
-        load_task_context(0);
+        unsafe {
+            load_task_context(0);
+        }
     }
 
     extern "C" fn task1() {
         unsafe {
             loop {
                 crate::print_uart0(b"task1 start\n");
-                switch_tasks(0, 1);
+                yield_task();
             }
         }
     }
@@ -163,7 +203,7 @@ mod tests {
         unsafe {
             loop {
                 crate::print_uart0(b"task2 start\n");
-                switch_tasks(1, 0);
+                yield_task();
             }
         }
     }
