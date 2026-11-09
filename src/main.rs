@@ -86,19 +86,18 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
 extern "C" fn rust_main_task() {
     unsafe {
         print_uart0(b"rkrv rust_main_task\n");
-        let ret = sbi::set_timer_relative(10000000);
-        assert!(ret.error == 0);
-        loop {
-            core::arch::asm!("wfi");
-        }
-        #[allow(unreachable_code)]
         sched::new_task(task1).unwrap();
         sched::new_task(task2).unwrap();
         sched::new_task(task3).unwrap();
+        let ret = sbi::set_timer_relative(10000);
+        assert!(ret.error == 0);
         loop {
             print_uart0(b"main\n");
-            sched::yield_task();
+            for _ in 0..1000 {
+                core::arch::asm!("pause");
+            }
         }
+        #[allow(unreachable_code)]
         loop {
             core::arch::asm!("ebreak");
         }
@@ -111,7 +110,9 @@ extern "C" fn rust_main_task() {
         unsafe {
             loop {
                 print_uart0(b"1\n");
-                sched::yield_task();
+                for _ in 0..1000 {
+                    core::arch::asm!("pause");
+                }
             }
         }
     }
@@ -119,7 +120,9 @@ extern "C" fn rust_main_task() {
         unsafe {
             loop {
                 print_uart0(b"2\n");
-                sched::yield_task();
+                for _ in 0..1000 {
+                    core::arch::asm!("pause");
+                }
             }
         }
     }
@@ -127,7 +130,9 @@ extern "C" fn rust_main_task() {
         unsafe {
             loop {
                 print_uart0(b"3\n");
-                sched::yield_task();
+                for _ in 0..1000 {
+                    core::arch::asm!("pause");
+                }
             }
         }
     }

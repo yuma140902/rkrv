@@ -1,4 +1,4 @@
-use crate::{per_hart::get_per_hart, print_uart0, print_uart0_hex_line};
+use crate::{per_hart::get_per_hart, print_uart0, print_uart0_hex_line, sched};
 
 pub fn init_trap() {
     unsafe {
@@ -18,10 +18,12 @@ extern "C" fn trap_handler() {
     let sepc: u64;
     let scause: u64;
     let stval: u64;
+    let sstatus: u64;
     unsafe {
         core::arch::asm!("csrr {}, sepc", out(reg) sepc);
         core::arch::asm!("csrr {}, scause", out(reg) scause);
         core::arch::asm!("csrr {}, stval", out(reg) stval);
+        core::arch::asm!("csrr {}, sstatus", out(reg) sstatus);
     }
     unsafe {
         print_uart0(b"trap_handler:\n");
@@ -34,8 +36,13 @@ extern "C" fn trap_handler() {
             print_uart0(b"  interrupt\n");
             if scause & 0xff == 5 {
                 print_uart0(b"    timer interrupt\n");
-                let ret = crate::sbi::set_timer(u64::MAX);
+                let ret = crate::sbi::set_timer_relative(10000);
                 assert!(ret.error == 0);
+
+                sched::yield_task();
+
+                core::arch::asm!("csrw sepc, {}", in(reg) sepc);
+                core::arch::asm!("csrw sstatus, {}", in(reg) sstatus);
             } else {
                 panic!();
             }

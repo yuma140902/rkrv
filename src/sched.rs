@@ -94,16 +94,36 @@ fn pick_next_task(current_tid: usize) -> Option<usize> {
 }
 
 pub fn yield_task() {
-    let per_hart = unsafe { get_per_hart() };
-    let current_tid = per_hart.current_tid;
-    let next_tid = match pick_next_task(current_tid) {
-        Some(tid) => tid,
-        None => return,
-    };
-
     unsafe {
+        if get_per_hart().interrupt_disable_counter > 0 {
+            return;
+        }
+        let _guard = Guard::disable_interrupt();
+
+        let per_hart = get_per_hart();
+        let current_tid = per_hart.current_tid;
+        let next_tid = match pick_next_task(current_tid) {
+            Some(tid) => tid,
+            None => return,
+        };
+
         assert!(next_tid != current_tid);
         switch_tasks(current_tid, next_tid);
+    }
+
+    struct Guard(bool);
+    impl Guard {
+        pub fn disable_interrupt() -> Self {
+            let sstatus = unsafe { crate::trap::disable_interrupt() };
+            Self(sstatus & (1_u64 << 1) != 0)
+        }
+    }
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            if self.0 {
+                unsafe { crate::trap::enable_interrupt() };
+            }
+        }
     }
 }
 
@@ -111,21 +131,19 @@ unsafe fn on_context_switch_pre(next_tid: usize) {
     unsafe {
         let per_hart = get_per_hart();
         assert_eq!(per_hart.interrupt_disable_counter, 0);
-        crate::trap::disable_interrupt();
         per_hart.current_tid = next_tid;
     }
 }
 
-unsafe fn on_context_switch_post() {
-    unsafe {
-        crate::trap::enable_interrupt();
-    }
+const unsafe fn on_context_switch_post() {
+    // pass
 }
 
 /// # Safety
 ///
 /// - current_tid と next_tid が初期化済みのタスク ID であること
 /// - current_tid と next_tid が同じでないこと
+/// - 割り込みが無効であること
 unsafe fn switch_tasks(current_tid: usize, next_tid: usize) {
     unsafe {
         on_context_switch_pre(next_tid);
@@ -142,6 +160,8 @@ unsafe fn switch_tasks(current_tid: usize, next_tid: usize) {
 pub unsafe fn load_task_context(tid: usize) -> ! {
     let task = unsafe { TASKS[tid].as_ref().unwrap() };
     unsafe {
+        assert_eq!(get_per_hart().interrupt_disable_counter, 0);
+        crate::trap::disable_interrupt();
         on_context_switch_pre(tid);
         load_context(task.sp.get());
     }
@@ -149,7 +169,9 @@ pub unsafe fn load_task_context(tid: usize) -> ! {
 
 extern "C" fn task_trampoline() -> ! {
     unsafe {
+        assert_eq!(get_per_hart().interrupt_disable_counter, 0);
         on_context_switch_post();
+        crate::trap::enable_interrupt();
     }
     let entry = unsafe { TASKS[get_per_hart().current_tid].as_ref().unwrap().entry };
     entry();
