@@ -63,9 +63,9 @@ extern "C" fn trap_handler() {
 /// [`pop_enable_interrupt`] とペアで呼び出す必要がある
 pub unsafe fn push_disable_interrupt() {
     unsafe {
+        let sstatus = disable_interrupt();
         let per_hart = get_per_hart();
         if per_hart.interrupt_disable_counter == 0 {
-            let sstatus = disable_interrupt();
             per_hart.original_sie_bit = (sstatus & (1_u64 << 1)) != 0;
         }
         per_hart.interrupt_disable_counter += 1;
