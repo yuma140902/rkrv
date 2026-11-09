@@ -55,16 +55,26 @@ extern "C" fn trap_handler() {
 ///
 /// [`pop_enable_interrupt`] とペアで呼び出す必要がある
 pub unsafe fn push_disable_interrupt() {
-    let sstatus: u64;
     unsafe {
         let per_hart = get_per_hart();
         if per_hart.interrupt_disable_counter == 0 {
-            // SIE bit (bit 1) をクリア
-            core::arch::asm!("csrrc {}, sstatus, {}", out(reg) sstatus, in(reg) 1_u64 << 1);
+            let sstatus = disable_interrupt();
             per_hart.original_sie_bit = (sstatus & (1_u64 << 1)) != 0;
         }
         per_hart.interrupt_disable_counter += 1;
     }
+}
+
+/// # Safety
+///
+/// TODO
+pub unsafe fn disable_interrupt() -> u64 {
+    let sstatus: u64;
+    unsafe {
+        // SIE bit (bit 1) をクリア
+        core::arch::asm!("csrrc {}, sstatus, {}", out(reg) sstatus, in(reg) 1_u64 << 1);
+    }
+    sstatus
 }
 
 /// # Safety
@@ -78,10 +88,21 @@ pub unsafe fn pop_enable_interrupt() {
         }
         per_hart.interrupt_disable_counter -= 1;
         if per_hart.interrupt_disable_counter == 0 && per_hart.original_sie_bit {
-            // SIE bit (bit 1) をセット
-            core::arch::asm!("csrrs zero, sstatus, {}", in(reg) 1_u64 << 1);
+            enable_interrupt();
         }
     }
+}
+
+/// # Safety
+///
+/// TODO
+pub unsafe fn enable_interrupt() -> u64 {
+    let sstatus: u64;
+    unsafe {
+        // SIE bit (bit 1) をセット
+        core::arch::asm!("csrrs {}, sstatus, {}", out(reg) sstatus, in(reg) 1_u64 << 1);
+    }
+    sstatus
 }
 
 pub struct InterruptGuard(());

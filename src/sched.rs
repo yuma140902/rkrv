@@ -109,14 +109,16 @@ pub fn yield_task() {
 
 unsafe fn on_context_switch_pre(next_tid: usize) {
     unsafe {
-        crate::trap::push_disable_interrupt();
-        get_per_hart().current_tid = next_tid;
+        let per_hart = get_per_hart();
+        assert_eq!(per_hart.interrupt_disable_counter, 0);
+        crate::trap::disable_interrupt();
+        per_hart.current_tid = next_tid;
     }
 }
 
 unsafe fn on_context_switch_post() {
     unsafe {
-        crate::trap::pop_enable_interrupt();
+        crate::trap::enable_interrupt();
     }
 }
 
