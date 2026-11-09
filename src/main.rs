@@ -87,10 +87,11 @@ extern "C" fn rust_main_task() {
     unsafe {
         print_uart0(b"rkrv rust_main_task\n");
         let ret = sbi::set_timer_relative(10000000);
+        assert!(ret.error == 0);
         loop {
             core::arch::asm!("wfi");
         }
-        assert!(ret.error == 0);
+        #[allow(unreachable_code)]
         sched::new_task(task1).unwrap();
         sched::new_task(task2).unwrap();
         sched::new_task(task3).unwrap();
@@ -98,7 +99,6 @@ extern "C" fn rust_main_task() {
             print_uart0(b"main\n");
             sched::yield_task();
         }
-        #[allow(unreachable_code)]
         loop {
             core::arch::asm!("ebreak");
         }

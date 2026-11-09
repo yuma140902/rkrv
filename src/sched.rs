@@ -1,5 +1,7 @@
 use core::cell::UnsafeCell;
 
+use crate::per_hart::get_per_hart;
+
 pub const STACK_SIZE: usize = 16 * 1024;
 
 #[repr(C)]
@@ -32,8 +34,6 @@ const _: () = assert!(core::mem::size_of::<Context>() == 112);
 pub const NR_TASKS: usize = 4;
 static mut TASKS: [Option<Task>; NR_TASKS] = [const { None }; NR_TASKS];
 static mut STACKS: [TaskStack; NR_TASKS] = [const { TaskStack([0u8; STACK_SIZE]) }; NR_TASKS];
-static mut CURRENT_TID: usize = 0;
-static mut ROUND_ROBIN_COUNTER: usize = 0;
 
 #[must_use]
 pub fn new_task(entry: extern "C" fn()) -> Option<usize> {
@@ -79,15 +79,14 @@ unsafe fn init_task(tid: usize, entry: extern "C" fn()) {
 }
 
 fn pick_next_task(current_tid: usize) -> Option<usize> {
+    let per_hart = unsafe { get_per_hart() };
     for i in 0..NR_TASKS {
-        let tid = (unsafe { ROUND_ROBIN_COUNTER } + i) % NR_TASKS;
+        let tid = (per_hart.round_robin_counter + i) % NR_TASKS;
         if tid == current_tid {
             continue;
         }
         if unsafe { TASKS[tid].is_some() } {
-            unsafe {
-                ROUND_ROBIN_COUNTER = (tid + 1) % NR_TASKS;
-            }
+            per_hart.round_robin_counter = (tid + 1) % NR_TASKS;
             return Some(tid);
         }
     }
@@ -95,7 +94,8 @@ fn pick_next_task(current_tid: usize) -> Option<usize> {
 }
 
 pub fn yield_task() {
-    let current_tid = unsafe { CURRENT_TID };
+    let per_hart = unsafe { get_per_hart() };
+    let current_tid = per_hart.current_tid;
     let next_tid = match pick_next_task(current_tid) {
         Some(tid) => tid,
         None => return,
@@ -110,7 +110,7 @@ pub fn yield_task() {
 unsafe fn on_context_switch_pre(next_tid: usize) {
     unsafe {
         crate::trap::push_disable_interrupt();
-        CURRENT_TID = next_tid;
+        get_per_hart().current_tid = next_tid;
     }
 }
 
@@ -149,7 +149,7 @@ extern "C" fn task_trampoline() -> ! {
     unsafe {
         on_context_switch_post();
     }
-    let entry = unsafe { TASKS[CURRENT_TID].as_ref().unwrap().entry };
+    let entry = unsafe { TASKS[get_per_hart().current_tid].as_ref().unwrap().entry };
     entry();
     loop {
         yield_task();

@@ -1,4 +1,4 @@
-use crate::{print_uart0, print_uart0_hex_line};
+use crate::{per_hart::get_per_hart, print_uart0, print_uart0_hex_line};
 
 pub fn init_trap() {
     unsafe {
@@ -51,21 +51,19 @@ extern "C" fn trap_handler() {
     }
 }
 
-static mut INTERRUPT_DISABLE_COUNTER: usize = 0;
-static mut ORIGINAL_SIE_BIT: bool = true;
-
 /// # Safety
 ///
 /// [`pop_enable_interrupt`] とペアで呼び出す必要がある
 pub unsafe fn push_disable_interrupt() {
     let sstatus: u64;
     unsafe {
-        if INTERRUPT_DISABLE_COUNTER == 0 {
+        let per_hart = get_per_hart();
+        if per_hart.interrupt_disable_counter == 0 {
             // SIE bit (bit 1) をクリア
             core::arch::asm!("csrrc {}, sstatus, {}", out(reg) sstatus, in(reg) 1_u64 << 1);
-            ORIGINAL_SIE_BIT = (sstatus & (1_u64 << 1)) != 0;
+            per_hart.original_sie_bit = (sstatus & (1_u64 << 1)) != 0;
         }
-        INTERRUPT_DISABLE_COUNTER += 1;
+        per_hart.interrupt_disable_counter += 1;
     }
 }
 
@@ -74,11 +72,12 @@ pub unsafe fn push_disable_interrupt() {
 /// [`push_disable_interrupt`] とペアで呼び出す必要がある
 pub unsafe fn pop_enable_interrupt() {
     unsafe {
-        if INTERRUPT_DISABLE_COUNTER == 0 {
+        let per_hart = get_per_hart();
+        if per_hart.interrupt_disable_counter == 0 {
             panic!("pop_enable_interrupt called without matching push_disable_interrupt");
         }
-        INTERRUPT_DISABLE_COUNTER -= 1;
-        if INTERRUPT_DISABLE_COUNTER == 0 && ORIGINAL_SIE_BIT {
+        per_hart.interrupt_disable_counter -= 1;
+        if per_hart.interrupt_disable_counter == 0 && per_hart.original_sie_bit {
             // SIE bit (bit 1) をセット
             core::arch::asm!("csrrs zero, sstatus, {}", in(reg) 1_u64 << 1);
         }
