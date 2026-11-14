@@ -6,6 +6,7 @@
 #![feature(alloc_error_handler)]
 
 pub mod alloc;
+pub mod allocator;
 pub mod per_hart;
 pub mod sbi;
 pub mod sched;

@@ -1,3 +1,5 @@
+use core::num::NonZeroUsize;
+
 #[repr(transparent)]
 #[derive(Default, Clone, Copy, PartialEq, Eq)]
 pub struct Pte(usize);
@@ -196,7 +198,7 @@ impl PageTable {
 }
 
 #[repr(transparent)]
-#[derive(Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Pa(usize);
 
 #[allow(clippy::use_self)]
@@ -210,6 +212,10 @@ impl Pa {
     pub const PPN1_MASK: usize = 0x1ff << Pa::PPN1_OFF;
     pub const PPN2_OFF: usize = 30;
     pub const PPN2_MASK: usize = 0x3ff_ffff << Pa::PPN2_OFF;
+
+    pub const fn get(&self) -> usize {
+        self.0
+    }
 
     pub const fn offset(&self) -> usize {
         self.0 & Pa::OFFSET
@@ -229,6 +235,42 @@ impl Pa {
 
     pub const fn ppn2(&self) -> usize {
         (self.0 & Pa::PPN2_MASK) >> Pa::PPN2_OFF
+    }
+}
+
+impl core::ops::Add<usize> for Pa {
+    type Output = Self;
+    fn add(self, rhs: usize) -> Self::Output {
+        Self(self.0 + rhs)
+    }
+}
+
+#[repr(transparent)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct NonNullPa(NonZeroUsize);
+
+impl NonNullPa {
+    pub fn new(pa: Pa) -> Option<Self> {
+        NonZeroUsize::new(pa.0).map(NonNullPa)
+    }
+
+    pub const fn pa(&self) -> Pa {
+        Pa(self.0.get())
+    }
+
+    pub const fn get(&self) -> usize {
+        self.0.get()
+    }
+
+    pub const fn get_nonzero(&self) -> NonZeroUsize {
+        self.0
+    }
+}
+
+impl core::ops::Add<usize> for NonNullPa {
+    type Output = Self;
+    fn add(self, rhs: usize) -> Self::Output {
+        Self(self.0.saturating_add(rhs))
     }
 }
 
@@ -263,6 +305,10 @@ impl Va {
     }
 }
 
+pub const GIGAPAGE_SIZE: usize = 1024 * 1024 * 1024;
+pub const MEGAPAGE_SIZE: usize = 2 * 1024 * 1024;
+pub const PAGE_SIZE: usize = 4096;
+
 static mut L2_ROOT_PT: PageTable = PageTable::new();
 static mut L1_MMIO_PT: PageTable = PageTable::new();
 static mut L0_UART0_PT: PageTable = PageTable::new();
@@ -278,7 +324,7 @@ unsafe fn make_identity_mapping() {
     let uart0_pt_pa = Pa(&raw mut L0_UART0_PT as usize);
     let ram_pt_pa = Pa(&raw mut L1_RAM_PT as usize);
     unsafe {
-        assert!(uart0_pa.0.is_multiple_of(4096));
+        assert!(uart0_pa.0.is_multiple_of(PAGE_SIZE));
         L2_ROOT_PT.entries[uart0_va.vpn2()] = *Pte::valid().set_ppn(mmio_pt_pa.ppn());
         L1_MMIO_PT.entries[uart0_va.vpn1()] = *Pte::valid().set_ppn(uart0_pt_pa.ppn());
         L0_UART0_PT.entries[uart0_va.vpn0()] = *Pte::valid()
@@ -288,10 +334,10 @@ unsafe fn make_identity_mapping() {
             .set_dirty(true)
             .set_ppn(uart0_pa.ppn());
 
-        for ram_addr in (0x8000_0000..0x8800_0000).step_by(2 * 1024 * 1024) {
+        for ram_addr in (0x8000_0000..0x8800_0000).step_by(MEGAPAGE_SIZE) {
             let ram_va = Va(ram_addr);
             let ram_pa = Pa(ram_addr);
-            assert!(ram_addr.is_multiple_of(2 * 1024 * 1024));
+            assert!(ram_addr.is_multiple_of(MEGAPAGE_SIZE));
 
             if !L2_ROOT_PT.entries[ram_va.vpn2()].is_valid() {
                 L2_ROOT_PT.entries[ram_va.vpn2()] = *Pte::valid().set_ppn(ram_pt_pa.ppn());
