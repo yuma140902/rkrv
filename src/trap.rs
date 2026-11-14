@@ -1,3 +1,5 @@
+use core::cell::UnsafeCell;
+
 use crate::{per_hart, print_uart0, print_uart0_hex_line, sched};
 
 pub fn init_trap() {
@@ -58,17 +60,51 @@ extern "C" fn trap_handler() {
     }
 }
 
+struct InterruptState {
+    counter: UnsafeCell<usize>,
+    original_sie_bit: UnsafeCell<bool>,
+}
+
+unsafe impl Sync for InterruptState {}
+
+static PER_HARTS: [InterruptState; per_hart::NR_HARTS] = [const {
+    InterruptState {
+        counter: UnsafeCell::new(0),
+        original_sie_bit: UnsafeCell::new(true),
+    }
+}; per_hart::NR_HARTS];
+
+pub fn read_interrupt_disable_counter() -> usize {
+    let this_hart = per_hart::get_hart_id();
+    unsafe { *PER_HARTS[this_hart].counter.get() }
+}
+
+fn write_interrupt_disable_counter(counter: usize) {
+    let this_hart = per_hart::get_hart_id();
+    unsafe { *PER_HARTS[this_hart].counter.get() = counter }
+}
+
+fn read_original_sie_bit() -> bool {
+    let this_hart = per_hart::get_hart_id();
+    unsafe { *PER_HARTS[this_hart].original_sie_bit.get() }
+}
+
+fn write_original_sie_bit(bit: bool) {
+    let this_hart = per_hart::get_hart_id();
+    unsafe { *PER_HARTS[this_hart].original_sie_bit.get() = bit }
+}
+
 /// # Safety
 ///
 /// [`pop_enable_interrupt`] とペアで呼び出す必要がある
 pub unsafe fn push_disable_interrupt() {
     unsafe {
         let sstatus = disable_interrupt();
-        if per_hart::read_interrupt_disable_counter() == 0 {
-            per_hart::write_original_sie_bit(sstatus & (1_u64 << 1) != 0);
+        if read_interrupt_disable_counter() == 0 {
+            write_original_sie_bit(sstatus & (1_u64 << 1) != 0);
         }
-        let c = per_hart::read_interrupt_disable_counter();
-        per_hart::write_interrupt_disable_counter(c + 1);
+        let c = read_interrupt_disable_counter();
+        write_interrupt_disable_counter(c + 1);
     }
 }
 
@@ -89,12 +125,12 @@ pub unsafe fn disable_interrupt() -> u64 {
 /// [`push_disable_interrupt`] とペアで呼び出す必要がある
 pub unsafe fn pop_enable_interrupt() {
     unsafe {
-        if per_hart::read_interrupt_disable_counter() == 0 {
+        if read_interrupt_disable_counter() == 0 {
             panic!("pop_enable_interrupt called without matching push_disable_interrupt");
         }
-        let c = per_hart::read_interrupt_disable_counter();
-        per_hart::write_interrupt_disable_counter(c - 1);
-        if per_hart::read_interrupt_disable_counter() == 0 && per_hart::read_original_sie_bit() {
+        let c = read_interrupt_disable_counter();
+        write_interrupt_disable_counter(c - 1);
+        if read_interrupt_disable_counter() == 0 && read_original_sie_bit() {
             enable_interrupt();
         }
     }
@@ -112,12 +148,12 @@ pub unsafe fn enable_interrupt() -> u64 {
     sstatus
 }
 
-pub struct InterruptGuard(());
+pub struct InterruptGuard(core::marker::PhantomData<*mut () /* !Send + !Sync */>);
 
 impl Default for InterruptGuard {
     fn default() -> Self {
         unsafe { push_disable_interrupt() }
-        Self(())
+        Self(Default::default())
     }
 }
 
