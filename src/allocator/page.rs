@@ -11,6 +11,12 @@ struct FreeListNode {
 const _: () = assert!(core::mem::size_of::<FreeListNode>() < sv39::PAGE_SIZE);
 
 impl FreeListPageAllocator {
+    pub const fn new_empty() -> Self {
+        Self {
+            free_list_head: None,
+        }
+    }
+
     /// # Safety
     ///
     /// base_addr と last_addr_exclusive の間の範囲が未使用であること

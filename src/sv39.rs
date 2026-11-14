@@ -250,8 +250,11 @@ impl core::ops::Add<usize> for Pa {
 pub struct NonNullPa(NonZeroUsize);
 
 impl NonNullPa {
-    pub fn new(pa: Pa) -> Option<Self> {
-        NonZeroUsize::new(pa.0).map(NonNullPa)
+    pub const fn new(pa: usize) -> Option<Self> {
+        match NonZeroUsize::new(pa) {
+            Some(nonzero) => Some(Self(nonzero)),
+            None => None,
+        }
     }
 
     pub const fn pa(&self) -> Pa {

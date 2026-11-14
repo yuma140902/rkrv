@@ -53,7 +53,11 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
         print_uart0_hex_line("__bss_end  ", (&raw const rkrv::__bss_end) as usize);
     }
     unsafe {
-        rkrv::alloc::init((&raw const rkrv::__bss_end) as u64);
+        let base_addr = &raw const rkrv::__bss_end as usize;
+        let base_addr = rkrv::sv39::NonNullPa::new(base_addr).unwrap();
+        // TODO: 128MB 固定
+        let last_addr_exclusive = const { rkrv::sv39::NonNullPa::new(0x8800_0000).unwrap() };
+        rkrv::allocator::rust::init(base_addr, last_addr_exclusive);
     }
     trap::init_trap();
     unsafe {
