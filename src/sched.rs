@@ -1,6 +1,6 @@
 use core::cell::UnsafeCell;
 
-use crate::per_hart::get_per_hart;
+use crate::per_hart;
 
 pub const STACK_SIZE: usize = 16 * 1024;
 
@@ -79,14 +79,13 @@ unsafe fn init_task(tid: usize, entry: extern "C" fn()) {
 }
 
 fn pick_next_task(current_tid: usize) -> Option<usize> {
-    let per_hart = unsafe { get_per_hart() };
     for i in 0..NR_TASKS {
-        let tid = (per_hart.round_robin_counter + i) % NR_TASKS;
+        let tid = (per_hart::read_round_robin_counter() + i) % NR_TASKS;
         if tid == current_tid {
             continue;
         }
         if unsafe { TASKS[tid].is_some() } {
-            per_hart.round_robin_counter = (tid + 1) % NR_TASKS;
+            per_hart::write_round_robin_counter((tid + 1) % NR_TASKS);
             return Some(tid);
         }
     }
@@ -95,13 +94,12 @@ fn pick_next_task(current_tid: usize) -> Option<usize> {
 
 pub fn yield_task() {
     unsafe {
-        if get_per_hart().interrupt_disable_counter > 0 {
+        if per_hart::read_interrupt_disable_counter() > 0 {
             return;
         }
         let _guard = Guard::disable_interrupt();
 
-        let per_hart = get_per_hart();
-        let current_tid = per_hart.current_tid;
+        let current_tid = per_hart::read_current_tid();
         let next_tid = match pick_next_task(current_tid) {
             Some(tid) => tid,
             None => return,
@@ -128,11 +126,8 @@ pub fn yield_task() {
 }
 
 unsafe fn on_context_switch_pre(next_tid: usize) {
-    unsafe {
-        let per_hart = get_per_hart();
-        assert_eq!(per_hart.interrupt_disable_counter, 0);
-        per_hart.current_tid = next_tid;
-    }
+    assert_eq!(per_hart::read_interrupt_disable_counter(), 0);
+    per_hart::write_current_tid(next_tid);
 }
 
 const unsafe fn on_context_switch_post() {
@@ -160,7 +155,7 @@ unsafe fn switch_tasks(current_tid: usize, next_tid: usize) {
 pub unsafe fn load_task_context(tid: usize) -> ! {
     let task = unsafe { TASKS[tid].as_ref().unwrap() };
     unsafe {
-        assert_eq!(get_per_hart().interrupt_disable_counter, 0);
+        assert_eq!(per_hart::read_interrupt_disable_counter(), 0);
         crate::trap::disable_interrupt();
         on_context_switch_pre(tid);
         load_context(task.sp.get());
@@ -169,11 +164,11 @@ pub unsafe fn load_task_context(tid: usize) -> ! {
 
 extern "C" fn task_trampoline() -> ! {
     unsafe {
-        assert_eq!(get_per_hart().interrupt_disable_counter, 0);
+        assert_eq!(per_hart::read_interrupt_disable_counter(), 0);
         on_context_switch_post();
         crate::trap::enable_interrupt();
     }
-    let entry = unsafe { TASKS[get_per_hart().current_tid].as_ref().unwrap().entry };
+    let entry = unsafe { TASKS[per_hart::read_current_tid()].as_ref().unwrap().entry };
     entry();
     loop {
         yield_task();

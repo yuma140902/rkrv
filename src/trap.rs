@@ -1,4 +1,4 @@
-use crate::{per_hart::get_per_hart, print_uart0, print_uart0_hex_line, sched};
+use crate::{per_hart, print_uart0, print_uart0_hex_line, sched};
 
 pub fn init_trap() {
     unsafe {
@@ -64,11 +64,11 @@ extern "C" fn trap_handler() {
 pub unsafe fn push_disable_interrupt() {
     unsafe {
         let sstatus = disable_interrupt();
-        let per_hart = get_per_hart();
-        if per_hart.interrupt_disable_counter == 0 {
-            per_hart.original_sie_bit = (sstatus & (1_u64 << 1)) != 0;
+        if per_hart::read_interrupt_disable_counter() == 0 {
+            per_hart::write_original_sie_bit(sstatus & (1_u64 << 1) != 0);
         }
-        per_hart.interrupt_disable_counter += 1;
+        let c = per_hart::read_interrupt_disable_counter();
+        per_hart::write_interrupt_disable_counter(c + 1);
     }
 }
 
@@ -89,12 +89,12 @@ pub unsafe fn disable_interrupt() -> u64 {
 /// [`push_disable_interrupt`] とペアで呼び出す必要がある
 pub unsafe fn pop_enable_interrupt() {
     unsafe {
-        let per_hart = get_per_hart();
-        if per_hart.interrupt_disable_counter == 0 {
+        if per_hart::read_interrupt_disable_counter() == 0 {
             panic!("pop_enable_interrupt called without matching push_disable_interrupt");
         }
-        per_hart.interrupt_disable_counter -= 1;
-        if per_hart.interrupt_disable_counter == 0 && per_hart.original_sie_bit {
+        let c = per_hart::read_interrupt_disable_counter();
+        per_hart::write_interrupt_disable_counter(c - 1);
+        if per_hart::read_interrupt_disable_counter() == 0 && per_hart::read_original_sie_bit() {
             enable_interrupt();
         }
     }
