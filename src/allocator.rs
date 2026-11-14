@@ -1,6 +1,6 @@
 use crate::sv39::{self, NonNullPa};
 
-pub struct PageAllocator {
+pub struct FreeListPageAllocator {
     free_list_head: Option<NonNullPa>,
 }
 
@@ -10,7 +10,7 @@ struct FreeListNode {
 
 const _: () = assert!(core::mem::size_of::<FreeListNode>() < sv39::PAGE_SIZE);
 
-impl PageAllocator {
+impl FreeListPageAllocator {
     /// # Safety
     ///
     /// base_addr と last_addr_exclusive の間の範囲が未使用であること
