@@ -56,6 +56,11 @@ extern "C" fn rust_main(_hart_id: usize, _dtb_address: usize) -> ! {
         rkrv::alloc::init((&raw const rkrv::__bss_end) as u64);
     }
     trap::init_trap();
+    unsafe {
+        rkrv::sv39::init();
+        // page fault test:
+        // core::ptr::write_volatile(0x8800_1000 as *mut u8, 42);
+    }
 
     let v = alloc::vec![1, 2, 3, 4, 5];
     for vi in v {

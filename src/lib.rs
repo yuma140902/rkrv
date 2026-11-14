@@ -9,6 +9,7 @@ pub mod alloc;
 pub mod per_hart;
 pub mod sbi;
 pub mod sched;
+pub mod sv39;
 pub mod trap;
 
 unsafe extern "C" {
