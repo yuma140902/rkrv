@@ -4,8 +4,11 @@
 #![no_std]
 #![feature(riscv_ext_intrinsics)]
 #![feature(alloc_error_handler)]
+// TODO: update to rust 1.100
+#![feature(allocator_api)]
 
 pub mod allocator;
+pub mod data;
 pub mod per_hart;
 pub mod sbi;
 pub mod sched;

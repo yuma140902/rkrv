@@ -213,7 +213,7 @@ impl Pa {
     pub const PPN2_OFF: usize = 30;
     pub const PPN2_MASK: usize = 0x3ff_ffff << Pa::PPN2_OFF;
 
-    pub const fn get(&self) -> usize {
+    pub const fn as_usize(&self) -> usize {
         self.0
     }
 
@@ -257,15 +257,19 @@ impl NonNullPa {
         }
     }
 
+    pub const fn from_nonzero(nonzero: NonZeroUsize) -> Self {
+        Self(nonzero)
+    }
+
     pub const fn pa(&self) -> Pa {
         Pa(self.0.get())
     }
 
-    pub const fn get(&self) -> usize {
+    pub const fn as_usize(&self) -> usize {
         self.0.get()
     }
 
-    pub const fn get_nonzero(&self) -> NonZeroUsize {
+    pub const fn as_nonzero_usize(&self) -> NonZeroUsize {
         self.0
     }
 }

@@ -23,11 +23,15 @@ impl FreeListPageAllocator {
     pub unsafe fn new(base_addr: NonNullPa, last_addr_exclusive: NonNullPa) -> Self {
         assert!(
             base_addr
-                .get()
+                .as_usize()
                 .is_multiple_of(core::mem::align_of::<FreeListNode>())
         );
-        assert!(base_addr.get().is_multiple_of(sv39::PAGE_SIZE));
-        assert!(last_addr_exclusive.get().is_multiple_of(sv39::PAGE_SIZE));
+        assert!(base_addr.as_usize().is_multiple_of(sv39::PAGE_SIZE));
+        assert!(
+            last_addr_exclusive
+                .as_usize()
+                .is_multiple_of(sv39::PAGE_SIZE)
+        );
         assert!(base_addr < last_addr_exclusive);
         let mut current = base_addr;
         while current < last_addr_exclusive {
@@ -37,7 +41,7 @@ impl FreeListPageAllocator {
             }
             unsafe {
                 core::ptr::write(
-                    current.get() as *mut FreeListNode,
+                    current.as_usize() as *mut FreeListNode,
                     FreeListNode { next: Some(next) },
                 );
             }
@@ -45,7 +49,7 @@ impl FreeListPageAllocator {
         }
         unsafe {
             core::ptr::write(
-                current.get() as *mut FreeListNode,
+                current.as_usize() as *mut FreeListNode,
                 FreeListNode { next: None },
             );
         }
@@ -57,7 +61,7 @@ impl FreeListPageAllocator {
     pub const fn alloc_page(&mut self) -> Option<NonNullPa> {
         if let Some(page) = self.free_list_head {
             unsafe {
-                let node = &*(page.get() as *const FreeListNode);
+                let node = &*(page.as_usize() as *const FreeListNode);
                 self.free_list_head = node.next;
             }
             Some(page)
@@ -73,7 +77,7 @@ impl FreeListPageAllocator {
     /// - page ごとに 1 度だけ呼び出すこと
     pub const unsafe fn dealloc_page(&mut self, page: NonNullPa) {
         unsafe {
-            let node = &mut *(page.get() as *mut FreeListNode);
+            let node = &mut *(page.as_usize() as *mut FreeListNode);
             node.next = self.free_list_head;
         }
         self.free_list_head = Some(page);

@@ -43,7 +43,7 @@ unsafe impl core::alloc::GlobalAlloc for RkrvGlobalAlloc {
         unsafe {
             let p = &mut *self.page_allocator.get();
             p.alloc_page()
-                .map_or(core::ptr::null_mut(), |page| page.get() as *mut u8)
+                .map_or(core::ptr::null_mut(), |page| page.as_usize() as *mut u8)
         }
     }
 
