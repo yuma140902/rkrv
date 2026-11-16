@@ -34,6 +34,7 @@ pub struct BuddyPageAllocator {
     aligned_base_addr: NonNullPa,
     free_bitmap: [Bitmap<NoOpAllocator>; NR_RANKS],
     free_lists: [Option<NonNull<FreeBlock>>; NR_RANKS],
+    aux_heap: alloc::boxed::Box<[u8]>,
 }
 
 struct FreeBlock {
@@ -215,7 +216,7 @@ impl BuddyPageAllocator {
     pub unsafe fn new(
         base_addr: NonNullPa,
         last_addr_exclusive: NonNullPa,
-        mut heap: alloc::boxed::Box<[u8]>,
+        mut aux_heap: alloc::boxed::Box<[u8]>,
     ) -> Self {
         assert!(base_addr.as_usize().is_multiple_of(sv39::PAGE_SIZE));
         assert!(
@@ -246,7 +247,7 @@ impl BuddyPageAllocator {
         );
         assert!(size >= 1 << (PAGE_SIZE_LOG2 + NR_RANKS - 1));
 
-        assert!(heap.len() > 2 * size / sv39::PAGE_SIZE);
+        assert!(aux_heap.len() > 2 * size / sv39::PAGE_SIZE);
 
         let mut bump_index = 0;
         let free_bitmaps = core::array::from_fn(|rank| {
@@ -254,7 +255,7 @@ impl BuddyPageAllocator {
             let bitmap_size = nr_pages.div_ceil(8);
             let inner_box = unsafe {
                 alloc::boxed::Box::from_non_null_in(
-                    NonNull::from_mut(&mut heap[bump_index..bump_index + bitmap_size]),
+                    NonNull::from_mut(&mut aux_heap[bump_index..bump_index + bitmap_size]),
                     NoOpAllocator(()),
                 )
             };
@@ -266,6 +267,7 @@ impl BuddyPageAllocator {
             aligned_base_addr: rounded_down_base_addr,
             free_bitmap: free_bitmaps,
             free_lists: [None; NR_RANKS],
+            aux_heap,
         };
 
         for page in (base_addr.as_usize()..last_addr_exclusive.as_usize()).step_by(sv39::PAGE_SIZE)
