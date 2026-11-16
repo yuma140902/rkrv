@@ -79,7 +79,7 @@ impl BuddyPageAllocator {
     }
 
     unsafe fn add_to_free_list(&mut self, page: NonNullPa, rank: usize) {
-        let new_node = NonNull::<FreeBlock>::without_provenance(page.as_nonzero_usize());
+        let new_node = NonNull::<FreeBlock>::with_exposed_provenance(page.as_nonzero_usize());
         let head = self.free_lists[rank];
         if let Some(head) = head {
             unsafe {
@@ -100,7 +100,7 @@ impl BuddyPageAllocator {
     }
 
     unsafe fn remove_from_free_list(&mut self, page: NonNullPa, rank: usize) {
-        let node = NonNull::<FreeBlock>::without_provenance(page.as_nonzero_usize());
+        let node = NonNull::<FreeBlock>::with_exposed_provenance(page.as_nonzero_usize());
         let head = self.free_lists[rank];
         if let Some(head) = head
             && head == node
