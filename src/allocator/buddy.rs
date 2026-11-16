@@ -3,7 +3,7 @@ extern crate alloc;
 use core::{num::NonZeroUsize, ptr::NonNull};
 
 use crate::{
-    data::bitvec::BitVec,
+    data::bitmap::Bitmap,
     sv39::{self, NonNullPa},
 };
 
@@ -32,7 +32,7 @@ pub const NR_RANKS: usize = 20;
 
 pub struct BuddyPageAllocator {
     aligned_base_addr: NonNullPa,
-    free_bitmap: [BitVec; NR_RANKS],
+    free_bitmap: [Bitmap<NoOpAllocator>; NR_RANKS],
     free_lists: [Option<NonNull<FreeBlock>>; NR_RANKS],
 }
 
@@ -240,19 +240,14 @@ impl BuddyPageAllocator {
         let free_bitmaps = core::array::from_fn(|rank| {
             let nr_pages = size / (1 << (rank + PAGE_SIZE_LOG2));
             let bitmap_size = nr_pages.div_ceil(8);
-            let mut inner_vec = unsafe {
-                alloc::vec::Vec::from_parts_in(
-                    NonNull::from_ref(&heap[bump_index]),
-                    bitmap_size,
-                    bitmap_size,
+            let inner_box = unsafe {
+                alloc::boxed::Box::from_non_null_in(
+                    NonNull::from_ref(&heap[bump_index..bump_index + bitmap_size]),
                     NoOpAllocator(()),
                 )
             };
-            for byte in inner_vec.iter_mut() {
-                *byte = 0;
-            }
             bump_index += bitmap_size;
-            BitVec::new(inner_vec, nr_pages)
+            Bitmap::new(inner_box, nr_pages)
         });
 
         let mut ret = Self {

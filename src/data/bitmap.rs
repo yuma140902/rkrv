@@ -1,18 +1,21 @@
-use crate::allocator::buddy::NoOpAllocator;
-
 extern crate alloc;
 
-pub struct BitVec {
-    inner: alloc::vec::Vec<u8, NoOpAllocator>,
+use alloc::boxed::Box;
+
+pub struct Bitmap<A: alloc::alloc::Allocator = alloc::alloc::Global> {
+    inner: Box<[u8], A>,
     len: usize,
 }
 
-impl BitVec {
-    pub fn new(inner: alloc::vec::Vec<u8, NoOpAllocator>, len: usize) -> Self {
+impl<A: alloc::alloc::Allocator> Bitmap<A> {
+    pub fn new(mut inner: Box<[u8], A>, len: usize) -> Self {
         assert!(
             len <= inner.len() * 8,
             "Length exceeds the number of bits in the inner vector"
         );
+        for byte in inner.iter_mut() {
+            *byte = 0;
+        }
         Self { inner, len }
     }
 
@@ -35,7 +38,7 @@ impl BitVec {
     }
 }
 
-impl core::ops::Index<usize> for BitVec {
+impl<A: alloc::alloc::Allocator> core::ops::Index<usize> for Bitmap<A> {
     type Output = bool;
     fn index(&self, index: usize) -> &Self::Output {
         assert!(index < self.len, "Index out of bounds");
