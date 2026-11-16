@@ -229,7 +229,7 @@ impl BuddyPageAllocator {
                 .unwrap();
         let rounded_up_last_addr_exclusive = NonNullPa::new(
             (last_addr_exclusive.as_usize() + (1 << (PAGE_SIZE_LOG2 + NR_RANKS - 1)) - 1)
-                & !((1 << (NR_RANKS - 1)) - 1),
+                & !((1 << (PAGE_SIZE_LOG2 + NR_RANKS - 1)) - 1),
         )
         .unwrap();
         let size = rounded_up_last_addr_exclusive.as_usize() - rounded_down_base_addr.as_usize();
