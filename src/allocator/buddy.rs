@@ -100,6 +100,7 @@ impl BuddyPageAllocator {
     }
 
     unsafe fn remove_from_free_list(&mut self, page: NonNullPa, rank: usize) {
+        // TODO: use NonNull::with_addr()
         let node = NonNull::<FreeBlock>::with_exposed_provenance(page.as_nonzero_usize());
         let head = self.free_lists[rank];
         if let Some(head) = head
