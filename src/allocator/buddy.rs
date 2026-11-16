@@ -233,6 +233,17 @@ impl BuddyPageAllocator {
         )
         .unwrap();
         let size = rounded_up_last_addr_exclusive.as_usize() - rounded_down_base_addr.as_usize();
+        assert!(
+            rounded_up_last_addr_exclusive
+                .as_usize()
+                .is_multiple_of(1 << (PAGE_SIZE_LOG2 + NR_RANKS - 1))
+        );
+        assert!(
+            rounded_down_base_addr
+                .as_usize()
+                .is_multiple_of(1 << (PAGE_SIZE_LOG2 + NR_RANKS - 1))
+        );
+        assert!(size >= 1 << (PAGE_SIZE_LOG2 + NR_RANKS - 1));
 
         assert!(heap.len() > 2 * size / sv39::PAGE_SIZE);
 
