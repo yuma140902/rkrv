@@ -242,7 +242,7 @@ impl BuddyPageAllocator {
             let bitmap_size = nr_pages.div_ceil(8);
             let inner_box = unsafe {
                 alloc::boxed::Box::from_non_null_in(
-                    NonNull::from_ref(&heap[bump_index..bump_index + bitmap_size]),
+                    NonNull::from_mut(&mut heap[bump_index..bump_index + bitmap_size]),
                     NoOpAllocator(()),
                 )
             };
