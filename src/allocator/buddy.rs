@@ -268,7 +268,7 @@ impl BuddyPageAllocator {
             aligned_base_addr: rounded_down_base_addr,
             free_bitmap: free_bitmaps,
             free_lists: [None; NR_RANKS],
-            aux_heap,
+            _aux_heap: aux_heap,
         };
 
         for page in (base_addr.as_usize()..last_addr_exclusive.as_usize()).step_by(sv39::PAGE_SIZE)
