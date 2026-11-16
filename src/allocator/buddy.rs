@@ -191,7 +191,7 @@ impl BuddyPageAllocator {
             return;
         }
         let mut page = page;
-        for higher_rank in rank..NR_RANKS {
+        for higher_rank in rank..(NR_RANKS - 1) {
             let buddy = Self::get_buddy(page, higher_rank);
             if !self.is_free(buddy, higher_rank) {
                 break;
