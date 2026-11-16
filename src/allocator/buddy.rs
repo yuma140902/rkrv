@@ -34,7 +34,7 @@ pub struct BuddyPageAllocator {
     aligned_base_addr: NonNullPa,
     free_bitmap: [Bitmap<NoOpAllocator>; NR_RANKS],
     free_lists: [Option<NonNull<FreeBlock>>; NR_RANKS],
-    aux_heap: alloc::boxed::Box<[u8], NoOpAllocator>,
+    _aux_heap: alloc::boxed::Box<[u8], NoOpAllocator>,
 }
 
 struct FreeBlock {
@@ -257,7 +257,7 @@ impl BuddyPageAllocator {
             let inner_box = unsafe {
                 alloc::boxed::Box::from_non_null_in(
                     NonNull::from_mut(&mut aux_heap[bump_index..bump_index + bitmap_size]),
-                    NoOpAllocator(()),
+                    NoOpAllocator,
                 )
             };
             bump_index += bitmap_size;
@@ -288,7 +288,7 @@ impl BuddyPageAllocator {
 }
 
 #[derive(Clone, Copy)]
-pub struct NoOpAllocator(());
+pub struct NoOpAllocator;
 
 unsafe impl core::alloc::Allocator for NoOpAllocator {
     fn allocate(
