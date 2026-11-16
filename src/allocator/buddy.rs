@@ -211,10 +211,11 @@ impl BuddyPageAllocator {
     /// # Safety
     ///
     /// TODO
+    #[allow(clippy::boxed_local)]
     pub unsafe fn new(
         base_addr: NonNullPa,
         last_addr_exclusive: NonNullPa,
-        heap: &mut [u8],
+        mut heap: alloc::boxed::Box<[u8]>,
     ) -> Self {
         assert!(base_addr.as_usize().is_multiple_of(sv39::PAGE_SIZE));
         assert!(
